@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import polars as pl
 import altair as alt
+import duckdb
 
 
 st.title("WASH Global Monitor")
@@ -32,26 +32,27 @@ def get_raw_data(url) -> pd.DataFrame:
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return None
-    
-# Convert polars summary to a pandas DataFrame
-def convert_pl_to_pd(df_polars) -> pd.DataFrame:
-    df_pandas = df_polars.to_pandas()
-    return df_pandas
 
 # Aggregate data and return summarized polars dataframe  
-def aggregate_records(data, **kwargs) -> pd.DataFrame:
-    col_name = kwargs.get('col_name') 
-    col_name_alias = kwargs.get('col_name_alias') 
-    group_by_key = kwargs.get('group_by_key') 
-    sort_key = kwargs.get('sort_key') 
+def aggregate_service_type(data) -> pd.DataFrame:
+    return duckdb.query("""
+                              SELECT year, service_type, COUNT(service_type) AS service_type_count
+                              FROM data
+                              GROUP BY year, service_type
+                              ORDER BY year ASC
+                              -- LIMIT 100
+                              """).to_df()
+ 
+    
 
-    df_polars = pl.from_pandas(data)
-
-    df_agg_service_type_polars = df_polars.group_by([group_by_key, col_name]).agg(
-                  pl.col(col_name).count().alias(col_name_alias),
-              ).sort([sort_key], descending=[False])
-    data = convert_pl_to_pd(df_agg_service_type_polars)
-    return data
+def aggregate_service_level(data) -> pd.DataFrame:
+    return duckdb.query("""
+                              SELECT year, service_level, COUNT(service_level) AS service_level_count
+                              FROM data
+                              GROUP BY year, service_level
+                              ORDER BY year ASC
+                              -- LIMIT 100
+                              """).to_df()
 
 
 
@@ -60,15 +61,9 @@ def aggregate_records(data, **kwargs) -> pd.DataFrame:
 #############################################################################
 api_data = get_raw_data(API_ENDPOINT)
 
-aggregated_data_service_type = aggregate_records(api_data, group_by_key="year", \
-                                                 sort_key="year", \
-                                                 col_name="service_type", \
-                                                 col_name_alias="service_type_count")
+aggregated_data_service_type = aggregate_service_type(api_data)
 
-aggregated_data_service_level = aggregate_records(api_data, group_by_key="year", \
-                                                 sort_key="year", \
-                                                 col_name="service_level", \
-                                                 col_name_alias="service_level_count")
+aggregated_data_service_level = aggregate_service_level(api_data)
 
 
 
