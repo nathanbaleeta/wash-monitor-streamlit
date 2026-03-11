@@ -34,27 +34,41 @@ def get_raw_data(url) -> pd.DataFrame:
         return None
 
 # Aggregate data and return summarized polars dataframe  
+# def aggregate_service_type(data) -> pd.DataFrame:
+#     return duckdb.query("""
+#                               SELECT year, service_type, COUNT(service_type) AS service_type_count
+#                               FROM data
+#                               GROUP BY year, service_type
+#                               ORDER BY year ASC
+#                               -- LIMIT 100
+#                               """).to_df()
+
+# def aggregate_service_level(data) -> pd.DataFrame:
+#     return duckdb.query("""
+#                               SELECT year, service_level, COUNT(service_level) AS service_level_count
+#                               FROM data
+#                               GROUP BY year, service_level
+#                               ORDER BY year ASC
+#                               -- LIMIT 100
+#                               """).to_df()
+
 def aggregate_service_type(data) -> pd.DataFrame:
-    return duckdb.query("""
-                              SELECT year, service_type, COUNT(service_type) AS service_type_count
-                              FROM data
-                              GROUP BY year, service_type
-                              ORDER BY year ASC
-                              -- LIMIT 100
-                              """).to_df()
- 
-    
+    result = (
+        data.groupby(['year', 'service_type'])['service_type']
+        .count()
+        .reset_index(name='service_type_count')
+        .sort_values(by='year', ascending=True)
+    )
+    return result
 
 def aggregate_service_level(data) -> pd.DataFrame:
-    return duckdb.query("""
-                              SELECT year, service_level, COUNT(service_level) AS service_level_count
-                              FROM data
-                              GROUP BY year, service_level
-                              ORDER BY year ASC
-                              -- LIMIT 100
-                              """).to_df()
-
-
+    result = (
+        data.groupby(['year', 'service_level'])['service_level']
+        .count()
+        .reset_index(name='service_level_count')
+        .sort_values(by='year', ascending=True)
+    )
+    return result
 
 #############################################################################
 # ETL pipeline                                                              #
